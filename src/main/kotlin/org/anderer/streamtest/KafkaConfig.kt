@@ -1,5 +1,6 @@
 package org.anderer.streamtest
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -19,9 +20,14 @@ import org.springframework.kafka.listener.SeekToCurrentErrorHandler
 import org.springframework.kafka.listener.ContainerProperties.AckMode
 import org.springframework.kafka.listener.DeadLetterPublishingRecoverer
 import org.springframework.kafka.listener.ErrorHandler
+import org.springframework.kafka.support.converter.MessageConverter
+import org.springframework.kafka.support.converter.RecordMessageConverter
 import org.springframework.kafka.transaction.KafkaAwareTransactionManager
 import org.springframework.kafka.transaction.KafkaTransactionManager
 import java.lang.Exception
+import org.springframework.kafka.support.converter.StringJsonMessageConverter
+
+
 
 
 @Configuration
@@ -87,5 +93,15 @@ public class KafkaConfig {
 //    fun transactionManager(producerFactory: ProducerFactory<Any, Any>): KafkaAwareTransactionManager<Any, Any> {
 //        return KafkaTransactionManager(producerFactory)
 //    }
+
+    @Bean
+    fun converter(): MessageConverter {
+        return StringJsonMessageConverter()
+    }
+
+    @Bean
+    fun converter2(objectMapper: ObjectMapper): RecordMessageConverter {
+        return StringJsonMessageConverter(objectMapper)
+    }
 
 }

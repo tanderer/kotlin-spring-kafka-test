@@ -1,38 +1,35 @@
-package org.anderer.streamtest
+package org.anderer.streamtest.transform
 
-import org.apache.kafka.clients.consumer.ConsumerRecord
-import org.apache.kafka.clients.producer.KafkaProducer
+import org.anderer.streamtest.KafkaAdminConfig
+import org.anderer.streamtest.KafkaConfig
+import org.anderer.streamtest.KafkaErrorHandlerConfig
+import org.apache.kafka.clients.consumer.Consumer
 import org.apache.kafka.clients.producer.ProducerRecord
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.jackson.JacksonAutoConfiguration
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.kafka.annotation.EnableKafka
 import org.springframework.kafka.config.KafkaListenerEndpointRegistry
 import org.springframework.kafka.core.*
-import org.springframework.kafka.listener.ContainerProperties
-import org.springframework.kafka.listener.KafkaMessageListenerContainer
-import org.springframework.kafka.listener.MessageListener
 import org.springframework.kafka.test.context.EmbeddedKafka
-import org.springframework.kafka.test.rule.KafkaEmbedded
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.junit.jupiter.SpringExtension
 import org.springframework.kafka.test.EmbeddedKafkaBroker
-import org.springframework.kafka.test.utils.ContainerTestUtils
 import org.springframework.kafka.test.utils.KafkaTestUtils
 import org.springframework.test.annotation.DirtiesContext
 import java.time.Duration
-import java.util.concurrent.LinkedBlockingQueue
 
 
 @EnableKafka
 @ExtendWith(SpringExtension::class)
-@SpringBootTest(classes = [KafkaErrorHandlerConfig::class, KafkaConfig::class, KafkaAdminConfig::class, KafkaAutoConfiguration::class, KafkaProcessor::class])
+@SpringBootTest(classes = [JacksonAutoConfiguration::class, KafkaErrorHandlerConfig::class, KafkaConfig::class, KafkaAdminConfig::class, KafkaAutoConfiguration::class, JacksonProcessor::class])
 @DirtiesContext
 @EmbeddedKafka(partitions = 1, controlledShutdown = false,
         brokerProperties = ["listeners=PLAINTEXT://localhost:3333", "port=3333"])
@@ -60,45 +57,44 @@ class KafkaConsumerTest {
 
 
     @BeforeEach
-    private fun buildKafkaTemplate() {
+    private fun setup() {
         val senderProps = KafkaTestUtils.producerProps(embeddedKafka)
         pf = DefaultKafkaProducerFactory<Integer, String>(senderProps)
+    }
 
-//        return KafkaTemplate(pf)
+    @AfterEach
+    private fun teardown() {
     }
 
     @Test
     fun test() {
-        val createConsumer = consumerFactory.createConsumer("xx", "xx")
-        createConsumer.subscribe(listOf("target"))
+        val consumer = createConsumer(JacksonProcessor.OUTPUT)
+        produceMessage(JacksonProcessor.INPUT, "{\"x\":\"y\"}")
 
-        val producer = producerFactory.createProducer()
-        producer.send(ProducerRecord("source", "xx"))
-
-        val records = createConsumer.poll(Duration.ofSeconds(5))
-        createConsumer.unsubscribe()
-        createConsumer.close()
-
-
+        val records = consumer.poll(Duration.ofSeconds(5))
         Assertions.assertTrue(!records.isEmpty)
     }
-
 
     @Test
     fun testFail() {
-        val createConsumer = consumerFactory.createConsumer("xx2", "xx2")
-        createConsumer.subscribe(listOf("source.dlq"))
+        val consumer = createConsumer("${JacksonProcessor.INPUT}.dlq")
+        produceMessage(JacksonProcessor.INPUT, "{\"x\":\"fail\"}")
 
-        val producer = producerFactory.createProducer()
-        producer.send(ProducerRecord("source", "fail"))
-
-        val records = createConsumer.poll(Duration.ofSeconds(5))
-        createConsumer.unsubscribe()
-        createConsumer.close()
-
-
+        val records = consumer.poll(Duration.ofSeconds(5))
         Assertions.assertTrue(!records.isEmpty)
     }
+
+    private fun produceMessage(topic: String, message: String) {
+        val producer = producerFactory.createProducer()
+        producer.send(ProducerRecord(topic, message))
+    }
+
+    fun createConsumer(topic: String): Consumer<Integer, String> {
+        val targetConsumer = consumerFactory.createConsumer(topic, topic)
+        targetConsumer.subscribe(listOf(topic))
+        return targetConsumer
+    }
+
 
 
 }

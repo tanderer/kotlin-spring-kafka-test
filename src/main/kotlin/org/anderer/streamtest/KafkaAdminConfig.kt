@@ -1,5 +1,6 @@
 package org.anderer.streamtest
 
+import org.anderer.streamtest.transform.DataTransformation
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -28,17 +29,38 @@ import java.lang.Exception
 @EnableKafka
 public class KafkaAdminConfig {
     @Bean
-    fun sourceTopic(): NewTopic {
-        return NewTopic("source", 1, 1.toShort())
+    fun setupTopics(transformations: List<DataTransformation>): List<NewTopic> {
+        return transformations.flatMap {
+            listOf(it.inputTopic, it.outputTopic, dlqName(it.inputTopic))
+        }.map { NewTopic(it, 1, 1.toShort()) }
     }
 
-    @Bean
-    fun targetTopic(): NewTopic {
-        return NewTopic("target", 1, 1.toShort())
+    private fun dlqName(inputTopic: String): String {
+        return "$inputTopic.dlq"
     }
-
-    @Bean
-    fun targetDlqTopic(): NewTopic {
-        return NewTopic("source.dlq", 1, 1.toShort())
-    }
+//
+//    @Bean
+//    fun sourceTopic(): NewTopic {
+//        return NewTopic("source", 1, 1.toShort())
+//    }
+//
+//    @Bean
+//    fun targetTopic(): NewTopic {
+//        return NewTopic("target", 1, 1.toShort())
+//    }
+//
+//    @Bean
+//    fun jacksonSourceTopic(): NewTopic {
+//        return NewTopic("jacksonSource", 1, 1.toShort())
+//    }
+//
+//    @Bean
+//    fun jacksonTargetTopic(): NewTopic {
+//        return NewTopic("jacksonTarget", 1, 1.toShort())
+//    }
+//
+//    @Bean
+//    fun targetDlqTopic(): NewTopic {
+//        return NewTopic("source.dlq", 1, 1.toShort())
+//    }
 }
