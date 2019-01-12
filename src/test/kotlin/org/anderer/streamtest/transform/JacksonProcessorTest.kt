@@ -50,16 +50,9 @@ class KafkaConsumerTest {
     @Autowired
     lateinit var producerFactory: ProducerFactory<Integer, String>
 
-    lateinit var pf: ProducerFactory<Integer, String>
-
-    @Value("\${spring.embedded.kafka.brokers}")
-    lateinit var value: String
-
 
     @BeforeEach
     private fun setup() {
-        val senderProps = KafkaTestUtils.producerProps(embeddedKafka)
-        pf = DefaultKafkaProducerFactory<Integer, String>(senderProps)
     }
 
     @AfterEach

@@ -1,6 +1,7 @@
 package org.anderer.streamtest
 
 import org.anderer.streamtest.transform.DataTransformation
+import org.apache.kafka.clients.admin.AdminClient
 import org.apache.kafka.clients.producer.ProducerConfig
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
@@ -13,6 +14,7 @@ import org.apache.kafka.clients.admin.NewTopic
 import org.apache.kafka.clients.consumer.ConsumerRecord
 import org.apache.kafka.common.TopicPartition
 import org.apache.kafka.common.record.Record
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
 import org.springframework.context.annotation.Import
 import org.springframework.kafka.core.*
@@ -22,45 +24,31 @@ import org.springframework.kafka.listener.DeadLetterPublishingRecoverer
 import org.springframework.kafka.listener.ErrorHandler
 import org.springframework.kafka.transaction.KafkaAwareTransactionManager
 import org.springframework.kafka.transaction.KafkaTransactionManager
+import org.springframework.stereotype.Component
 import java.lang.Exception
+import javax.annotation.PostConstruct
 
 
-@Configuration
+@Component
 @EnableKafka
 public class KafkaAdminConfig {
-    @Bean
-    fun setupTopics(transformations: List<DataTransformation>): List<NewTopic> {
-        return transformations.flatMap {
+    @Autowired
+    lateinit var transformations: List<DataTransformation>
+
+    @Autowired
+    lateinit var kafkaAdmin: KafkaAdmin
+
+    @PostConstruct
+    fun setupTopics() {
+        val admin = AdminClient.create(kafkaAdmin.config)
+        val topics = transformations.flatMap {
             listOf(it.inputTopic, it.outputTopic, dlqName(it.inputTopic))
         }.map { NewTopic(it, 1, 1.toShort()) }
+                .toList()
+        admin.createTopics(topics)
     }
 
     private fun dlqName(inputTopic: String): String {
         return "$inputTopic.dlq"
     }
-//
-//    @Bean
-//    fun sourceTopic(): NewTopic {
-//        return NewTopic("source", 1, 1.toShort())
-//    }
-//
-//    @Bean
-//    fun targetTopic(): NewTopic {
-//        return NewTopic("target", 1, 1.toShort())
-//    }
-//
-//    @Bean
-//    fun jacksonSourceTopic(): NewTopic {
-//        return NewTopic("jacksonSource", 1, 1.toShort())
-//    }
-//
-//    @Bean
-//    fun jacksonTargetTopic(): NewTopic {
-//        return NewTopic("jacksonTarget", 1, 1.toShort())
-//    }
-//
-//    @Bean
-//    fun targetDlqTopic(): NewTopic {
-//        return NewTopic("source.dlq", 1, 1.toShort())
-//    }
 }
