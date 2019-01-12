@@ -94,10 +94,10 @@ public class KafkaConfig {
 //        return KafkaTransactionManager(producerFactory)
 //    }
 
-    @Bean
-    fun converter(): MessageConverter {
-        return StringJsonMessageConverter()
-    }
+//    @Bean
+//    fun converter(): MessageConverter {
+//        return StringJsonMessageConverter()
+//    }
 
     @Bean
     fun converter2(objectMapper: ObjectMapper): RecordMessageConverter {

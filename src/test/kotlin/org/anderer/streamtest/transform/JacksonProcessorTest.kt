@@ -32,7 +32,7 @@ import java.time.Duration
 @SpringBootTest(classes = [JacksonAutoConfiguration::class, KafkaErrorHandlerConfig::class, KafkaConfig::class, KafkaAdminConfig::class, KafkaAutoConfiguration::class, JacksonProcessor::class])
 @DirtiesContext
 @EmbeddedKafka(partitions = 1, controlledShutdown = false,
-        brokerProperties = ["listeners=PLAINTEXT://localhost:3333", "port=3333"])
+        brokerProperties = ["listeners=PLAINTEXT://localhost:3333", "port=3333", "transaction.state.log.replication.factor=1", "transaction.state.log.min.isr=1", "offsets.topic.replication.factor=1"])
 @TestPropertySource(properties = [ "spring.kafka.bootstrap-servers=\${spring.embedded.kafka.brokers}"])
 class KafkaConsumerTest {
     @Autowired
@@ -78,8 +78,11 @@ class KafkaConsumerTest {
     }
 
     private fun produceMessage(topic: String, message: String) {
-        val producer = producerFactory.createProducer()
-        producer.send(ProducerRecord(topic, message))
+//        val producer = producerFactory.createProducer()
+//        producer.send(ProducerRecord(topic, message))
+        kafkaTemplate.executeInTransaction {
+            it.send(ProducerRecord(topic, message))
+        }
     }
 
     fun createConsumer(topic: String): Consumer<Integer, String> {
